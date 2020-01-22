@@ -110,6 +110,26 @@ The `dk.ir.parse` request tells `libaoscdk` to parse the given [DKIR][dkir] and 
 
 - `params` is a [DKIR][dkir] JSON object.
 
+#### Response
+
+On success, the `result` will be **boolean** `true`. Otherwise the `error` will be set to a **string** describing the error.
+
+```json
+{
+  "jsonrpc": "2.0",
+  "result": true,
+  "id": 1
+}
+```
+
+```json
+{
+  "jsonrpc": "2.0",
+  "error": "cannot parse the given DKIR",
+  "id": 1
+}
+```
+
 ### dk.step.max
 
 The `dk.step.max` request tells `libaoscdk` to give the total number of steps in the installation process for the front-end's display.
@@ -132,26 +152,6 @@ The `result` will be an **integer** of the number of total steps.
 {
   "jsonrpc": "2.0",
   "result": 8,
-  "id": 1
-}
-```
-
-#### Response
-
-On success, the `result` will be **boolean** `true`. Otherwise the `error` will be set to a **string** describing the error.
-
-```json
-{
-  "jsonrpc": "2.0",
-  "result": true,
-  "id": 1
-}
-```
-
-```json
-{
-  "jsonrpc": "2.0",
-  "error": "cannot parse the given DKIR",
   "id": 1
 }
 ```
