@@ -97,7 +97,9 @@ The version value indicates the specification version used in a DKIR. This is th
 ```
 
 - `mountpoint`: **string**, the path to a directory where the target root file system is going to be mounted.
-- `tarball`: **string**, the path to a tarball to be extracted.
+- `tarball`: **string**, the path or the URL to a tarball to be extracted.
+    - If this is a path, then the tarball file will be accessed directly.
+    - If this is a URL, then `libaoscdk` will first try fetching it from the Internet.
 
 ## The Extra Package Installation Array
 
