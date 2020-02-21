@@ -1,0 +1,14 @@
+# Doxyfile configurations that are different from the defaults
+
+PROJECT_NAME           = "@PROJECT_NAME@"
+PROJECT_NUMBER         = @PROJECT_VERSION@
+OUTPUT_DIRECTORY       = "@BUILDDIR@/docs"
+FULL_PATH_NAMES        = NO
+JAVADOC_AUTOBRIEF      = YES
+TAB_SIZE               = 2
+OPTIMIZE_OUTPUT_FOR_C  = YES
+EXTRACT_STATIC         = YES
+INPUT                  = "@SRCDIR@/include" "@SRCDIR@/lib" "@BUILDDIR@/lib/include" "@SRCDIR@/utils"
+RECURSIVE              = YES
+GENERATE_LATEX         = NO
+HAVE_DOT               = @HAVE_DOT@

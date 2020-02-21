@@ -1,0 +1,5 @@
+##### Options for libaoscdk #####
+
+option('build_utils', type: 'boolean', value: true)
+option('build_docs', type: 'boolean', value: true)
+option('build_tests', type: 'boolean', value: true)

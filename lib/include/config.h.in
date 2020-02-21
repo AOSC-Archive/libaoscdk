@@ -1,0 +1,22 @@
+/**
+ * @file config.h
+ * @author Junde Yhi <lmy441900@aosc.xyz>
+ * @copyright (C) 2019-2020 Anthon Open Source Community
+ *
+ * Global definitions and configurations for libaoscdk.
+ */
+
+#ifndef AOSC_DK_CONFIG_H
+#define AOSC_DK_CONFIG_H
+
+/**
+ * Name of this project.
+ */
+#define PROJECT_NAME    "@PROJECT_NAME@"
+
+/**
+ * Version string of this project.
+ */
+#define PROJECT_VERSION "@PROJECT_VERSION@"
+
+#endif
