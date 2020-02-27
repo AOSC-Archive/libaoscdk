@@ -7,7 +7,8 @@
  */
 
 #include "config.h"
-#include "log.h"
+#include "msg.h"
+#include <log.h>
 
 /**
  * Defines the logging domain for g_log functions, which should be the name of
@@ -26,6 +27,16 @@ enum DkLogOutput {
   DK_LOG_OUTPUT_FILE,
   DK_LOG_OUTPUT_G_LOG,
 };
+
+/**
+ * Thread handle for the log worker thread.
+ */
+static GThread *log_worker_thread_g = NULL;
+
+/**
+ * Asynchronous queue for log messages.
+ */
+static GAsyncQueue *log_queue_g = NULL;
 
 /**
  * The current state of log output.
@@ -51,68 +62,66 @@ static GFileOutputStream *log_file_stream_g = NULL;
  * @param file  [in] The name of file where the log is written.
  * @param line  [in] The number of line where the log is written.
  * @param func  [in] The name of function in which the log is written.
- * @param fmt   [in] A `printf`-like format string.
- * @param args  [in] A variadic list containing all arguments.
+ * @param log   [in] The log message.
  */
-static void dk_logv_file(const enum DkLogLevel level, const char *file, const int line, const char *func, const char *fmt, va_list args)
+static void dk_log_to_file(const enum DkLogLevel level, const char *file, const unsigned int line, const char *func, const char *log)
 {
   g_return_if_fail(log_file_g);
 
-  gchar *msg = g_strdup_vprintf(fmt, args);
   gboolean r = FALSE;
   GError *error = NULL;
 
   switch (level) {
     case DK_LOG_LEVEL_DEBUG:
-      r = g_output_stream_printf(G_OUTPUT_STREAM(log_file_stream_g), NULL, NULL, &error, "Debug: %s:%d %s: %s\n", file, line, func, msg);
+      r = g_output_stream_printf(G_OUTPUT_STREAM(log_file_stream_g), NULL, NULL, &error, "Debug: %s:%u %s: %s\n", file, line, func, log);
       if (!r && error) {
         dk_log_set_output_g_log();
-        dk_error("Failed to write a debugging log to file: %s. The log message is \"%s\". Falling back to GLog logging method.", error->message, msg);
+        dk_error("Failed to write a debugging log to file: %s. The log message is \"%s\". Falling back to GLog logging method.", error->message, log);
         dk_log_file_close();
         g_clear_error(&error);
       }
       break;
     case DK_LOG_LEVEL_INFO:
-      r = g_output_stream_printf(G_OUTPUT_STREAM(log_file_stream_g), NULL, NULL, &error, "Info: %s:%d %s: %s\n", file, line, func, msg);
+      r = g_output_stream_printf(G_OUTPUT_STREAM(log_file_stream_g), NULL, NULL, &error, "Info: %s:%u %s: %s\n", file, line, func, log);
       if (!r && error) {
         dk_log_set_output_g_log();
-        dk_error("Failed to write an informational log to file: %s. The log message is \"%s\". Falling back to GLog logging method.", error->message, msg);
+        dk_error("Failed to write an informational log to file: %s. The log message is \"%s\". Falling back to GLog logging method.", error->message, log);
         dk_log_file_close();
         g_clear_error(&error);
       }
       break;
     case DK_LOG_LEVEL_MESSAGE:
-      r = g_output_stream_printf(G_OUTPUT_STREAM(log_file_stream_g), NULL, NULL, &error, "Message: %s\n", msg);
+      r = g_output_stream_printf(G_OUTPUT_STREAM(log_file_stream_g), NULL, NULL, &error, "Message: %s\n", log);
       if (!r && error) {
         dk_log_set_output_g_log();
-        dk_error("Failed to write a message-log to file: %s. The log message is \"%s\". Falling back to GLog logging method.", error->message, msg);
+        dk_error("Failed to write a message-log to file: %s. The log message is \"%s\". Falling back to GLog logging method.", error->message, log);
         dk_log_file_close();
         g_clear_error(&error);
       }
       break;
     case DK_LOG_LEVEL_WARNING:
-      r = g_output_stream_printf(G_OUTPUT_STREAM(log_file_stream_g), NULL, NULL, &error, "Warning: %s\n", msg);
+      r = g_output_stream_printf(G_OUTPUT_STREAM(log_file_stream_g), NULL, NULL, &error, "Warning: %s\n", log);
       if (!r && error) {
         dk_log_set_output_g_log();
-        dk_error("Failed to write a warning-log to file: %s. The log message is \"%s\". Falling back to GLog logging method.", error->message, msg);
+        dk_error("Failed to write a warning-log to file: %s. The log message is \"%s\". Falling back to GLog logging method.", error->message, log);
         dk_log_file_close();
         g_clear_error(&error);
       }
       break;
     case DK_LOG_LEVEL_ERROR:
-      r = g_output_stream_printf(G_OUTPUT_STREAM(log_file_stream_g), NULL, NULL, &error, "Error: %s:%d %s: %s\n", file, line, func, msg);
+      r = g_output_stream_printf(G_OUTPUT_STREAM(log_file_stream_g), NULL, NULL, &error, "Error: %s:%u %s: %s\n", file, line, func, log);
       if (!r && error) {
         dk_log_set_output_g_log();
-        dk_error("Failed to write an erroneous log to file: %s. The log message is \"%s\". Falling back to GLog logging method.", error->message, msg);
+        dk_error("Failed to write an erroneous log to file: %s. The log message is \"%s\". Falling back to GLog logging method.", error->message, log);
         dk_log_file_close();
         g_clear_error(&error);
       }
       break;
     case DK_LOG_LEVEL_FATAL:
-      r = g_output_stream_printf(G_OUTPUT_STREAM(log_file_stream_g), NULL, NULL, &error, "Fatal Error: %s:%d %s: %s\n", file, line, func, msg);
+      r = g_output_stream_printf(G_OUTPUT_STREAM(log_file_stream_g), NULL, NULL, &error, "Fatal Error: %s:%u %s: %s\n", file, line, func, log);
       if (!r && error) {
         dk_log_set_output_g_log();
-        dk_error("Failed to write a fatally erroneous log to file: %s. The log message is \"%s\". Falling back to GLog logging method.", error->message, msg);
+        dk_error("Failed to write a fatally erroneous log to file: %s. The log message is \"%s\". Falling back to GLog logging method.", error->message, log);
         dk_log_file_close();
         g_clear_error(&error);
       }
@@ -123,8 +132,6 @@ static void dk_logv_file(const enum DkLogLevel level, const char *file, const in
       g_warn_if_reached();
       break;
   }
-
-  g_free(msg);
 }
 
 /**
@@ -134,13 +141,11 @@ static void dk_logv_file(const enum DkLogLevel level, const char *file, const in
  * @param file  [in] The name of file where the log is written.
  * @param line  [in] The number of line where the log is written.
  * @param func  [in] The name of function in which the log is written.
- * @param fmt   [in] A `printf`-like format string.
- * @param args  [in] A variadic list containing all arguments.
+ * @param log   [in] The log message.
  */
-static void dk_logv_glog(const enum DkLogLevel level, const char *file, const int line, const char *func, const char *fmt, va_list args)
+static void dk_log_to_g_log(const enum DkLogLevel level, const char *file, const unsigned int line, const char *func, const char *log)
 {
-  gchar *line_str    = g_strdup_printf("%d", line);
-  gchar *log_message = g_strdup_vprintf(fmt, args);
+  gchar *line_str = g_strdup_printf("%u", line);
 
   switch (level) {
     case DK_LOG_LEVEL_DEBUG:
@@ -149,7 +154,7 @@ static void dk_logv_glog(const enum DkLogLevel level, const char *file, const in
         "CODE_FILE", file,
         "CODE_LINE", line_str,
         "CODE_FUNC", func,
-        "MESSAGE", log_message
+        "MESSAGE", log
       );
       break;
     case DK_LOG_LEVEL_INFO:
@@ -158,7 +163,7 @@ static void dk_logv_glog(const enum DkLogLevel level, const char *file, const in
         "CODE_FILE", file,
         "CODE_LINE", line_str,
         "CODE_FUNC", func,
-        "MESSAGE", log_message
+        "MESSAGE", log
       );
       break;
     case DK_LOG_LEVEL_MESSAGE:
@@ -167,7 +172,7 @@ static void dk_logv_glog(const enum DkLogLevel level, const char *file, const in
         "CODE_FILE", file,
         "CODE_LINE", line_str,
         "CODE_FUNC", func,
-        "MESSAGE", log_message
+        "MESSAGE", log
       );
       break;
     case DK_LOG_LEVEL_WARNING:
@@ -176,7 +181,7 @@ static void dk_logv_glog(const enum DkLogLevel level, const char *file, const in
         "CODE_FILE", file,
         "CODE_LINE", line_str,
         "CODE_FUNC", func,
-        "MESSAGE", log_message
+        "MESSAGE", log
       );
       break;
     case DK_LOG_LEVEL_ERROR:
@@ -185,7 +190,7 @@ static void dk_logv_glog(const enum DkLogLevel level, const char *file, const in
         "CODE_FILE", file,
         "CODE_LINE", line_str,
         "CODE_FUNC", func,
-        "MESSAGE", log_message
+        "MESSAGE", log
       );
       break;
     case DK_LOG_LEVEL_FATAL:
@@ -194,7 +199,7 @@ static void dk_logv_glog(const enum DkLogLevel level, const char *file, const in
         "CODE_FILE", file,
         "CODE_LINE", line_str,
         "CODE_FUNC", func,
-        "MESSAGE", log_message
+        "MESSAGE", log
       );
       break;
     default:
@@ -202,14 +207,85 @@ static void dk_logv_glog(const enum DkLogLevel level, const char *file, const in
       break;
   }
 
-  g_free(log_message);
   g_free(line_str);
+}
+
+/**
+ * Dedicated function used as a log worker, receiving logging messages from
+ * other threads.
+ *
+ * @param data [in] Don't care.
+ * @return Whatever.
+ */
+static void *dk_log_worker(void *data)
+{
+  (void)data;
+
+  for (;;) {
+    struct DkLogMsg *msg = (struct DkLogMsg *)g_async_queue_pop(log_queue_g);
+    g_assert(msg);
+
+    if (msg->worker_exit) {
+      dk_log_msg_free(msg);
+      g_thread_exit(NULL);
+    }
+
+    switch (log_output_g) {
+      case DK_LOG_OUTPUT_FILE:
+        dk_log_to_file(msg->level, msg->file, msg->line, msg->func, msg->log);
+        break;
+      case DK_LOG_OUTPUT_G_LOG:
+        dk_log_to_g_log(msg->level, msg->file, msg->line, msg->func, msg->log);
+        break;
+      default:
+        g_warn_if_reached();
+        break;
+    }
+
+    dk_log_msg_free(msg);
+  }
+}
+
+/**
+ * Start dk_log_worker() in a separate thread.
+ *
+ * @return Non-0 if the operaton succeed. However, since internally
+ *         g_thread_new() is used, which terminates the whole program if a
+ *         thread cannot be created, a return value of 0 seems to be impossible.
+ *         Anyway.
+ */
+static int dk_log_worker_start(void)
+{
+  log_worker_thread_g = g_thread_new("log_worker", dk_log_worker, NULL);
+  g_assert(log_worker_thread_g);
+  return 1;
+}
+
+/**
+ * Stop the dk_log_worker() running in a separate thread.
+ *
+ * @return Non-0 if the operaton succeed.
+ */
+static int dk_log_worker_stop(void)
+{
+  g_return_val_if_fail(log_worker_thread_g, 0);
+
+  // Send a special message to the worker telling it to quit
+  g_async_queue_push(log_queue_g, dk_log_msg_new_worker_exit());
+
+  // ... and wait for it. g_thread_join() will consume #log_worker_thread_g.
+  g_thread_join(log_worker_thread_g);
+
+  log_worker_thread_g = NULL;
+
+  return 1;
 }
 
 /********** Public APIs **********/
 
 void dk_log(enum DkLogLevel level, const char *file, const int line, const char *func, const char *fmt, ...)
 {
+  g_return_if_fail(log_queue_g);
   g_return_if_fail(file != NULL);
   g_return_if_fail(line >= 0);
   g_return_if_fail(func != NULL);
@@ -218,17 +294,10 @@ void dk_log(enum DkLogLevel level, const char *file, const int line, const char 
   va_list args;
   va_start(args, fmt);
 
-  switch (log_output_g) {
-    case DK_LOG_OUTPUT_FILE:
-      dk_logv_file(level, file, line, func, fmt, args);
-      break;
-    case DK_LOG_OUTPUT_G_LOG:
-      dk_logv_glog(level, file, line, func, fmt, args);
-      break;
-    default:
-      g_warn_if_reached();
-      break;
-  }
+  g_async_queue_push(
+    log_queue_g,
+    dk_log_msg_new_v(level, file, line, func, fmt, args)
+  );
 
   va_end(args);
 }
@@ -303,5 +372,31 @@ int dk_log_file_close(void)
     g_clear_object(&log_file_g);
   }
 
+  return 1;
+}
+
+int dk_log_init(void)
+{
+  log_queue_g = g_async_queue_new_full(dk_log_msg_free);
+  g_assert(log_queue_g);
+
+  dk_log_worker_start();
+
+  dk_debug("Logging module initialized");
+
+  return 1;
+}
+
+int dk_log_deinit(void)
+{
+  dk_debug("Deinitializing logging module");
+
+  if (log_output_g == DK_LOG_OUTPUT_FILE)
+    dk_log_file_close(); // XXX: Anyway
+
+  dk_log_worker_stop();
+  g_clear_pointer(&log_queue_g, g_async_queue_unref);
+
+  // No log anymore
   return 1;
 }

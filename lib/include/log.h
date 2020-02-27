@@ -38,7 +38,6 @@ enum DkLogLevel {
  * @param line  [in] The number of line where dk_log() is called.
  * @param func  [in] The name of function in which dk_log() is called.
  * @param fmt   [in] A `printf`-like format string.
- * @param ...   [in] List of follow-up variables to substitude markups in fmt.
  */
 void dk_log(const enum DkLogLevel level, const char *file, const int line, const char *func, const char *fmt, ...);
 
@@ -114,5 +113,19 @@ int dk_log_set_output_g_log(void);
  * @return Non-0 if the operation succeed.
  */
 int dk_log_file_close(void);
+
+/**
+ * Initialize the logging module.
+ *
+ * @return Non-0 if the operation succeed.
+ */
+int dk_log_init(void);
+
+/**
+ * Deinitialize the logging module.
+ *
+ * @return Non-0 if the operation succeed.
+ */
+int dk_log_deinit(void);
 
 #endif
