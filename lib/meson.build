@@ -7,6 +7,7 @@ libaoscdk_srcs = files(
   'lib.c',
 
   'log/log.c',
+  'log/msg.c',
 )
 
 subdir('include')
