@@ -377,7 +377,7 @@ int dk_log_file_close(void)
 
 int dk_log_init(void)
 {
-  log_queue_g = g_async_queue_new_full(dk_log_msg_free);
+  log_queue_g = g_async_queue_new_full((GDestroyNotify)dk_log_msg_free);
   g_assert(log_queue_g);
 
   dk_log_worker_start();
