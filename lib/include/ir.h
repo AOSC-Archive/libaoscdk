@@ -1,5 +1,5 @@
-#ifndef AOSC_DK_IR_H
-#define AOSC_DK_IR_H
+#ifndef LIBAOSCDK_IR_H
+#define LIBAOSCDK_IR_H
 
 int dk_ir_parse(const char *ir);
 int dk_ir_parse_gvariant(GVariant *ir);

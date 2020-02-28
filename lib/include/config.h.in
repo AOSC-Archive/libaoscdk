@@ -6,8 +6,8 @@
  * Global definitions and configurations for libaoscdk.
  */
 
-#ifndef AOSC_DK_CONFIG_H
-#define AOSC_DK_CONFIG_H
+#ifndef LIBAOSCDK_CONFIG_H
+#define LIBAOSCDK_CONFIG_H
 
 /**
  * Name of this project.

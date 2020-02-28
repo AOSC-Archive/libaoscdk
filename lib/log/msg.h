@@ -8,8 +8,8 @@
  * logging infrastructure.
  */
 
-#ifndef AOSC_DK_LOG_MSG_H
-#define AOSC_DK_LOG_MSG_H
+#ifndef LIBAOSCDK_LOG_MSG_H
+#define LIBAOSCDK_LOG_MSG_H
 
 #include <log.h>
 #include <stdbool.h>

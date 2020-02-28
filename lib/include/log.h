@@ -6,8 +6,8 @@
  * Definition of the logging infrastructure for libaoscdk.
  */
 
-#ifndef AOSC_DK_LOG_H
-#define AOSC_DK_LOG_H
+#ifndef LIBAOSCDK_LOG_H
+#define LIBAOSCDK_LOG_H
 
 /**
  * Levels of logging.
