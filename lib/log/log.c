@@ -221,6 +221,8 @@ static void *dk_log_worker(void *data)
 {
   (void)data;
 
+  g_return_val_if_fail(log_queue_g, NULL);
+
   for (;;) {
     struct DkLogMsg *msg = (struct DkLogMsg *)g_async_queue_pop(log_queue_g);
     g_assert(msg);
