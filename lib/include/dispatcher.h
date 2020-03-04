@@ -1,6 +1,0 @@
-#ifndef LIBAOSCDK_DISPATCHER_H
-#define LIBAOSCDK_DISPATCHER_H
-
-
-
-#endif
